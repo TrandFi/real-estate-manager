@@ -201,7 +201,7 @@ CREATE TABLE `user_roles` (
 
 LOCK TABLES `user_roles` WRITE;
 /*!40000 ALTER TABLE `user_roles` DISABLE KEYS */;
-INSERT INTO `user_roles` VALUES (16,1),(17,2),(15,3),(14,4);
+INSERT INTO `user_roles` VALUES (16,1),(37,1),(38,1),(39,1),(17,2),(33,2),(34,2),(35,2),(36,2),(15,3),(29,3),(30,3),(31,3),(32,3),(14,4);
 /*!40000 ALTER TABLE `user_roles` ENABLE KEYS */;
 UNLOCK TABLES;
 
@@ -221,7 +221,7 @@ CREATE TABLE `users` (
   `is_active` tinyint(1) DEFAULT '1',
   PRIMARY KEY (`id`),
   UNIQUE KEY `email` (`email`)
-) ENGINE=InnoDB AUTO_INCREMENT=18 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=40 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -230,7 +230,7 @@ CREATE TABLE `users` (
 
 LOCK TABLES `users` WRITE;
 /*!40000 ALTER TABLE `users` DISABLE KEYS */;
-INSERT INTO `users` VALUES (14,'Администратор Системы','admin@example.com','$2y$10$j.ElFo5RV/K62ussC9xWq.z00AGVzL4LoDq6bp8BVPwfD63jU9j1y','Администрация',1),(15,'Петров Продавец Петрович','petrov@example.com','$2y$10$lRk722zs9xGQeqMDI4hQCexwOkafR.eCpwLVF84W1cNOyclVY0z8.','+7 (914) 492-99-21',1),(16,'Иванов Риелтор Иванович','ivanov@example.com','$2y$10$BHyZvlVYkIFyrCxEEA.2euhbCCvif41Cg4S2IxAkvsrGJiNR2gxJq','+7 (914) 412-91-04',1),(17,'Семен Покупатель Семенович','semenov@example.com','$2y$10$o2BIEN4G2rdMQ3Q0ba3wZu.fLt.5vLvvoFcB/WGU0xuvJhGkFASmq','+7 (914) 482-84-23',1);
+INSERT INTO `users` VALUES (14,'Администратор Системы','admin@example.com','$2y$10$j.ElFo5RV/K62ussC9xWq.z00AGVzL4LoDq6bp8BVPwfD63jU9j1y','Администрация',1),(15,'Петров Продавец Петрович','petrov@example.com','$2y$10$lRk722zs9xGQeqMDI4hQCexwOkafR.eCpwLVF84W1cNOyclVY0z8.','+7 (914) 492-99-21',1),(16,'Иванов Риелтор Иванович','ivanov@example.com','$2y$10$BHyZvlVYkIFyrCxEEA.2euhbCCvif41Cg4S2IxAkvsrGJiNR2gxJq','+7 (914) 412-91-04',1),(17,'Семен Покупатель Семенович','semenov@example.com','$2y$10$o2BIEN4G2rdMQ3Q0ba3wZu.fLt.5vLvvoFcB/WGU0xuvJhGkFASmq','+7 (914) 482-84-23',1),(29,'Продавец Александр','seller_alex@example.com','$2y$10$fB29plEmT.bJPNYm4aLuQORVuHTYROarToRJeq8hIIk8ZIZ06HHWy','+7 (900) 100-01-01, Продавец',1),(30,'Продавец Борис','seller_boris@example.com','$2y$10$pxEZMxZ732W7zePsTZUMSOwDrCZAu6cavL6d4CXMxC47V.AobAH1K','+7 (900) 100-02-02, Продавец',1),(31,'Продавец Виктория','seller_vik@example.com','$2y$10$Q8kIp010gHThQUyMDH336eF1Nes19zcLY7rbXV82dMyCQVnRRUefO','+7 (900) 100-03-03, Продавец',1),(32,'Продавец Галина','seller_galina@example.com','$2y$10$gaExbnqI6IAGm0O29RGcE.wbEep8MTHcuhvplCKd3VfgAfhW8.ZpK','+7 (900) 100-04-04, Продавец',1),(33,'Покупатель Дмитрий','buyer_dmitry@example.com','$2y$10$HA669FGAQGtUaUpC1WwN3ubOjdBvws5nLY3TRDt8jpDOkjhCb22j6','+7 (900) 200-01-01, Покупатель',1),(34,'Покупатель Елена','buyer_elena@example.com','$2y$10$NSiibkTnmqgugcLLTbJv..9c1bE5BQkb2Krf42wdehgQMm35.SKgC','+7 (900) 200-02-02, Покупатель',1),(35,'Покупатель Жанна','buyer_zhanna@example.com','$2y$10$sXj9BytBhLVF8QtzcfAwm.9tWISIIoEcr9AF5K0e6uTHmTTsyitNi','+7 (900) 200-03-03, Покупатель',1),(36,'Покупатель Захар','buyer_zakhar@example.com','$2y$10$AzD31UBmI0OoBkVIHGJPfOtfm7KVWVwTPE19hBmGkI4PsRd1P2xR2','+7 (900) 200-04-04, Покупатель',1),(37,'Риелтор Кирилл','realtor_kirill@example.com','$2y$10$lAX0.CKxVAdjtBJyS/PIcOtkDuFVx2zxw9dQZ4w6zCcVGXADgyuEW','+7 (900) 300-01-01, Агентство \"Инград\"',1),(38,'Риелтор Леонид','realtor_leonid@example.com','$2y$10$uIs2i5vl5s1HleOKc69pZerU6/5Fga.6W3rg2/0Mhy.5vp8fXqHgW','+7 (900) 300-02-02, Агентство \"Миэль\"',1),(39,'Риелтор Мария','realtor_maria@example.com','$2y$10$Yki6Sz1UAvMa5crci4dHOOJuax31VsCJ9JelnTQoWq2mssDbW9ZHW','+7 (900) 300-03-03, Частный риелтор',1);
 /*!40000 ALTER TABLE `users` ENABLE KEYS */;
 UNLOCK TABLES;
 /*!40103 SET TIME_ZONE=@OLD_TIME_ZONE */;
@@ -243,4 +243,4 @@ UNLOCK TABLES;
 /*!40101 SET COLLATION_CONNECTION=@OLD_COLLATION_CONNECTION */;
 /*!40111 SET SQL_NOTES=@OLD_SQL_NOTES */;
 
--- Dump completed on 2026-05-26 23:57:01
+-- Dump completed on 2026-05-27  0:45:12
