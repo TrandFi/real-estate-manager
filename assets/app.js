@@ -1300,12 +1300,12 @@ function renderAdminUsersTable() {
             <td>${escapeHtml(u.email)}</td>
             <td>${escapeHtml(u.group_name || '-')}</td>
             <td>
-                <select class="admin-role-select" data-user-id="${u.id}" ${disabledAttr}>
-                    <option value="buyer" ${u.roles.includes('buyer') ? 'selected' : ''}>Покупатель</option>
-                    <option value="seller" ${u.roles.includes('seller') ? 'selected' : ''}>Продавец</option>
-                    <option value="realtor" ${u.roles.includes('realtor') ? 'selected' : ''}>Риелтор</option>
-                    <option value="admin" ${u.roles.includes('admin') ? 'selected' : ''}>Администратор</option>
-                </select>
+                <div class="admin-role-checkboxes" data-user-id="${u.id}">
+                    <label style="display:block; font-size:0.85rem; margin-bottom:4px;"><input type="checkbox" value="buyer" class="role-cb" ${u.roles.includes('buyer') ? 'checked' : ''} ${disabledAttr}> Покупатель</label>
+                    <label style="display:block; font-size:0.85rem; margin-bottom:4px;"><input type="checkbox" value="seller" class="role-cb" ${u.roles.includes('seller') ? 'checked' : ''} ${disabledAttr}> Продавец</label>
+                    <label style="display:block; font-size:0.85rem; margin-bottom:4px;"><input type="checkbox" value="realtor" class="role-cb" ${u.roles.includes('realtor') ? 'checked' : ''} ${disabledAttr}> Риелтор</label>
+                    <label style="display:block; font-size:0.85rem;"><input type="checkbox" value="admin" class="role-cb" ${u.roles.includes('admin') ? 'checked' : ''} ${disabledAttr}> Администратор</label>
+                </div>
             </td>
             <td>
                 ${isSelf ? '<span style="color: var(--text-muted);">-</span>' : `
@@ -1335,9 +1335,12 @@ function renderAdminUsersTable() {
         if (!isSelf) {
             const saveBtn = tr.querySelector('.btn-save-user-admin');
             saveBtn.addEventListener('click', async () => {
-                const roleSelect = tr.querySelector('.admin-role-select');
+                const checkboxesContainer = tr.querySelector('.admin-role-checkboxes');
+                const checkedBoxes = checkboxesContainer.querySelectorAll('.role-cb:checked');
+                const selectedRoles = Array.from(checkedBoxes).map(cb => cb.value);
+                
                 const activeCheckbox = tr.querySelector('.admin-active-checkbox');
-                await saveUserChangesAdmin(u.id, roleSelect.value, activeCheckbox.checked);
+                await saveUserChangesAdmin(u.id, selectedRoles, activeCheckbox.checked);
             });
 
             const deleteBtn = tr.querySelector('.btn-delete-user-admin');
@@ -1350,13 +1353,13 @@ function renderAdminUsersTable() {
     });
 }
 
-async function saveUserChangesAdmin(userId, selectedRole, isActive) {
+async function saveUserChangesAdmin(userId, selectedRolesArray, isActive) {
     showLoader(true);
     try {
         const data = await apiFetch(`api/users.php?id=${userId}`, {
             method: 'PUT',
             body: JSON.stringify({
-                roles: [selectedRole],
+                roles: selectedRolesArray,
                 is_active: isActive ? 1 : 0
             })
         });
