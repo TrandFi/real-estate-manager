@@ -144,6 +144,7 @@ const DOM = {
     btnConfirmDeal: document.getElementById('btn-confirm-deal'),
     btnConfirmPurchase: document.getElementById('btn-confirm-purchase'),
     btnDeclineDeal: document.getElementById('btn-decline-deal'),
+    btnFinishDeal: document.getElementById('btn-finish-deal'),
 
     detailParticipantSeller: document.getElementById('detail-participant-seller'),
     detailParticipantRealtor: document.getElementById('detail-participant-realtor'),
@@ -232,6 +233,39 @@ function setupEventListeners() {
     // Отправка форм входа и регистрации
     DOM.loginForm.addEventListener('submit', handleLogin);
     DOM.registerForm.addEventListener('submit', handleRegister);
+
+    // Маска для ввода номера телефона
+    const phoneInput = document.getElementById('register-group');
+    if (phoneInput) {
+        phoneInput.addEventListener('input', function (e) {
+            let input = e.target.value.replace(/\D/g, '');
+            if (input.startsWith('7') || input.startsWith('8')) {
+                input = input.substring(1);
+            }
+            
+            let formatted = '';
+            if (input.length > 0) {
+                formatted += '+7 (' + input.substring(0, 3);
+            }
+            if (input.length >= 4) {
+                formatted += ') ' + input.substring(3, 6);
+            }
+            if (input.length >= 7) {
+                formatted += '-' + input.substring(6, 8);
+            }
+            if (input.length >= 9) {
+                formatted += '-' + input.substring(8, 10);
+            }
+            
+            e.target.value = formatted || (e.target.value ? '+7 (' : '');
+        });
+
+        phoneInput.addEventListener('keydown', function (e) {
+            if (e.key === 'Backspace' && e.target.value.length <= 4) {
+                e.target.value = '';
+            }
+        });
+    }
 
     // Кнопка Выйти
     DOM.logoutBtn.addEventListener('click', handleLogout);
@@ -771,6 +805,7 @@ function renderProjectDetails(project) {
     DOM.btnConfirmDeal.classList.add('hidden');
     DOM.btnConfirmPurchase.classList.add('hidden');
     DOM.btnDeclineDeal.classList.add('hidden');
+    DOM.btnFinishDeal.classList.add('hidden');
 
     const isUserRealtor = state.user.roles.includes('realtor');
     const isUserBuyer = state.user.roles.includes('buyer');
@@ -787,25 +822,32 @@ function renderProjectDetails(project) {
             DOM.btnAcceptRealtor.classList.remove('hidden');
             DOM.btnDeclineRealtor.classList.remove('hidden');
         }
-        // 3. Разрешить просмотр или отклонить бронь, если подтвержденный риелтор и объект "На просмотре"
+        // 3. Подтвердить/отклонить действия, если подтвержденный риелтор
         if (hasRealtor && parseInt(project.realtor_id) === parseInt(state.user.id) && project.realtor_accepted === 1) {
+            // Запись на просмотр при статусе "Готов к просмотру" (2)
             if (parseInt(project.status_id) === 2 && hasBuyer) {
                 DOM.btnConfirmDeal.classList.remove('hidden');
                 DOM.btnDeclineDeal.classList.remove('hidden');
             }
+            // Квартира "На просмотре" (5)
+            if (parseInt(project.status_id) === 5 && hasBuyer) {
+                DOM.btnDeclineDeal.classList.remove('hidden');
+            }
+            // Сделка забронирована (3)
             if (parseInt(project.status_id) === 3 && hasBuyer) {
+                DOM.btnFinishDeal.classList.remove('hidden');
                 DOM.btnDeclineDeal.classList.remove('hidden');
             }
         }
     }
 
     if (isUserBuyer) {
-        // 1. Хочу посмотреть, если объект "Создано" и риелтор подтвержден
-        if (parseInt(project.status_id) === 1 && hasRealtor && project.realtor_accepted === 1 && !hasBuyer) {
+        // 1. Записаться на просмотр, если объект "Готов к просмотру" и нет покупателя
+        if (parseInt(project.status_id) === 2 && hasRealtor && project.realtor_accepted === 1 && !hasBuyer) {
             DOM.btnBuyProperty.classList.remove('hidden');
         }
-        // 2. Подтвердить покупку, если объект забронирован за текущим покупателем
-        if (parseInt(project.status_id) === 3 && parseInt(project.buyer_id) === parseInt(state.user.id)) {
+        // 2. Купить квартиру, если статус "На просмотре" и текущий пользователь - покупатель
+        if (parseInt(project.status_id) === 5 && parseInt(project.buyer_id) === parseInt(state.user.id)) {
             DOM.btnConfirmPurchase.classList.remove('hidden');
         }
     }
@@ -813,10 +855,10 @@ function renderProjectDetails(project) {
     // Статус-бейдж
     DOM.detailBadgeStatus.textContent = project.status_name;
     DOM.detailBadgeStatus.className = 'badge';
-    if (project.status_name === 'Создано') DOM.detailBadgeStatus.classList.add('badge-idea');
-    if (project.status_name === 'На просмотре') DOM.detailBadgeStatus.classList.add('badge-work');
-    if (project.status_name === 'Забронировано') DOM.detailBadgeStatus.classList.add('badge-review');
-    if (project.status_name === 'Продано') DOM.detailBadgeStatus.classList.add('badge-completed');
+    if (project.status_name === 'Создано' || parseInt(project.status_id) === 1) DOM.detailBadgeStatus.classList.add('badge-idea');
+    if (project.status_name === 'На просмотре' || parseInt(project.status_id) === 5) DOM.detailBadgeStatus.classList.add('badge-work');
+    if (project.status_name === 'Забронировано' || parseInt(project.status_id) === 3) DOM.detailBadgeStatus.classList.add('badge-review');
+    if (project.status_name === 'Продано' || parseInt(project.status_id) === 4) DOM.detailBadgeStatus.classList.add('badge-completed');
 
     // Прогресс
     DOM.detailProgressLabel.textContent = `${project.progress_percent}%`;
@@ -844,7 +886,7 @@ function renderProjectDetails(project) {
     const isCreator = project.creator_id === state.user.id;
     const isAssignedRealtor = state.user.roles.includes('realtor') && project.realtor_id === state.user.id && project.realtor_accepted === 1;
 
-    const canModify = !isGlobalAdmin && (isCreator || isAssignedRealtor);
+    const canModify = isGlobalAdmin || isCreator || isAssignedRealtor;
 
     if (canModify) {
         DOM.editProjectBtn.classList.remove('hidden');
@@ -1266,15 +1308,26 @@ function renderAdminUsersTable() {
                 </select>
             </td>
             <td>
+                ${isSelf ? '<span style="color: var(--text-muted);">-</span>' : `
                 <label class="switch">
-                    <input type="checkbox" class="admin-active-checkbox" data-user-id="${u.id}" ${u.is_active ? 'checked' : ''} ${disabledAttr}>
+                    <input type="checkbox" class="admin-active-checkbox" data-user-id="${u.id}" ${u.is_active ? 'checked' : ''}>
                     <span class="slider"></span>
                 </label>
+                `}
             </td>
             <td>
-                <button class="btn btn-outline btn-xs btn-save-user-admin" data-user-id="${u.id}" ${disabledAttr}>
+                ${isSelf ? '<span style="color: var(--text-muted);">-</span>' : `
+                <button class="btn btn-icon-danger btn-xs btn-delete-user-admin" data-user-id="${u.id}" title="Удалить пользователя">
+                    <i class="fa-solid fa-trash-can"></i>
+                </button>
+                `}
+            </td>
+            <td>
+                ${isSelf ? '<span style="color: var(--text-muted);">-</span>' : `
+                <button class="btn btn-outline btn-xs btn-save-user-admin" data-user-id="${u.id}">
                     <i class="fa-solid fa-floppy-disk"></i> Сохранить
                 </button>
+                `}
             </td>
         `;
 
@@ -1285,6 +1338,11 @@ function renderAdminUsersTable() {
                 const roleSelect = tr.querySelector('.admin-role-select');
                 const activeCheckbox = tr.querySelector('.admin-active-checkbox');
                 await saveUserChangesAdmin(u.id, roleSelect.value, activeCheckbox.checked);
+            });
+
+            const deleteBtn = tr.querySelector('.btn-delete-user-admin');
+            deleteBtn.addEventListener('click', async () => {
+                await deleteUserAdmin(u.id);
             });
         }
 
@@ -1301,6 +1359,28 @@ async function saveUserChangesAdmin(userId, selectedRole, isActive) {
                 roles: [selectedRole],
                 is_active: isActive ? 1 : 0
             })
+        });
+
+        if (data.success) {
+            showToast(data.message, 'success');
+            // Обновляем локальное состояние и перерендериваем
+            await loadAdminUsersTable();
+        }
+    } catch (err) {
+        // Ошибка в apiFetch
+    } finally {
+        showLoader(false);
+    }
+}
+
+async function deleteUserAdmin(userId) {
+    if (!confirm('Вы уверены, что хотите удалить этого пользователя и все связанные с ним данные?')) {
+        return;
+    }
+    showLoader(true);
+    try {
+        const data = await apiFetch(`api/users.php?id=${userId}`, {
+            method: 'DELETE'
         });
 
         if (data.success) {
@@ -1375,43 +1455,164 @@ DOM.btnBuyProperty.addEventListener('click', () => executeWorkflowAction('buy_pr
 DOM.btnConfirmDeal.addEventListener('click', () => executeWorkflowAction('confirm_deal', state.selectedProjectId));
 DOM.btnConfirmPurchase.addEventListener('click', () => executeWorkflowAction('confirm_purchase', state.selectedProjectId));
 DOM.btnDeclineDeal.addEventListener('click', () => executeWorkflowAction('decline_deal', state.selectedProjectId));
+DOM.btnFinishDeal.addEventListener('click', () => executeWorkflowAction('finish_deal', state.selectedProjectId));
 
 function checkRealtorProposals() {
     const container = document.getElementById('realtor-notifications-container');
     if (!container) return;
 
-    if (!state.user || !state.user.roles.includes('seller')) {
+    if (!state.user) {
         container.style.display = 'none';
         container.innerHTML = '';
         return;
     }
 
-    const pendingProposals = state.projects.filter(p =>
-        p.creator_id === state.user.id &&
-        p.realtor_id &&
-        p.realtor_accepted === 2
-    );
+    const userId = parseInt(state.user.id);
+    const isSeller = state.user.roles.includes('seller');
+    const isRealtor = state.user.roles.includes('realtor');
+    const isBuyer = state.user.roles.includes('buyer');
 
-    if (pendingProposals.length === 0) {
+    let html = '';
+
+    state.projects.forEach(p => {
+        const pId = parseInt(p.id);
+        const realtorId = p.realtor_id ? parseInt(p.realtor_id) : null;
+        const buyerId = p.buyer_id ? parseInt(p.buyer_id) : null;
+        const creatorId = p.creator_id ? parseInt(p.creator_id) : null;
+        const statusId = parseInt(p.status_id);
+
+        // 1. Seller Notifications
+        if (isSeller && creatorId === userId) {
+            // Realtor offers handling
+            if (p.realtor_id && parseInt(p.realtor_accepted) === 2) {
+                html += `
+                    <div class="notification-bar" style="background: rgba(2, 136, 209, 0.2); border: 1px solid #0288d1; border-radius: 8px; padding: 12px 16px; margin-bottom: 15px; display: flex; justify-content: space-between; align-items: center; box-shadow: 0 4px 6px rgba(0,0,0,0.15);">
+                        <div style="color: #fff; font-size: 0.95em;">
+                            <i class="fa-solid fa-bell" style="color: #29b6f6; margin-right: 8px;"></i>
+                            Риелтор <b>${escapeHtml(p.realtor_name || 'Неизвестный риелтор')}</b> предлагает вести объект <b>${escapeHtml(p.title)}</b> (${escapeHtml(p.address || '')})
+                        </div>
+                        <div style="display: flex; gap: 8px;">
+                            <button class="btn btn-success btn-xs" onclick="acceptRealtorProposal(${pId})">Принять</button>
+                            <button class="btn btn-danger btn-xs" onclick="declineRealtorProposal(${pId})">Отклонить</button>
+                        </div>
+                    </div>
+                `;
+            }
+            // Property Sold notification
+            if (statusId === 4 && !localStorage.getItem('dismissed_sold_' + pId)) {
+                html += `
+                    <div class="notification-bar" style="background: rgba(46, 125, 50, 0.2); border: 1px solid #2e7d32; border-radius: 8px; padding: 12px 16px; margin-bottom: 15px; display: flex; justify-content: space-between; align-items: center; box-shadow: 0 4px 6px rgba(0,0,0,0.15);">
+                        <div style="color: #fff; font-size: 0.95em;">
+                            <i class="fa-solid fa-circle-check" style="color: #81c784; margin-right: 8px;"></i>
+                            Ваш объект <b>${escapeHtml(p.title)}</b> (${escapeHtml(p.address || '')}) успешно продан покупателю <b>${escapeHtml(p.buyer_name || 'Неизвестный покупатель')}</b>!
+                        </div>
+                        <div>
+                            <button class="btn btn-primary btn-xs" onclick="dismissSoldNotification(${pId})">Ок</button>
+                        </div>
+                    </div>
+                `;
+            }
+        }
+
+        // 2. Realtor Notifications
+        if (isRealtor && realtorId === userId && parseInt(p.realtor_accepted) === 1) {
+            // Buyer requested a viewing
+            if (statusId === 2 && buyerId) {
+                html += `
+                    <div class="notification-bar" style="background: rgba(2, 136, 209, 0.2); border: 1px solid #0288d1; border-radius: 8px; padding: 12px 16px; margin-bottom: 15px; display: flex; justify-content: space-between; align-items: center; box-shadow: 0 4px 6px rgba(0,0,0,0.15);">
+                        <div style="color: #fff; font-size: 0.95em;">
+                            <i class="fa-solid fa-calendar-day" style="color: #29b6f6; margin-right: 8px;"></i>
+                            Покупатель <b>${escapeHtml(p.buyer_name || 'Неизвестный покупатель')}</b> записался на просмотр объекта <b>${escapeHtml(p.title)}</b> (${escapeHtml(p.address || '')}).
+                        </div>
+                        <div style="display: flex; gap: 8px;">
+                            <button class="btn btn-success btn-xs" onclick="executeNotificationAction('confirm_deal', ${pId})">Подтвердить просмотр</button>
+                            <button class="btn btn-danger btn-xs" onclick="executeNotificationAction('decline_deal', ${pId})">Отменить запись</button>
+                        </div>
+                    </div>
+                `;
+            }
+            // Buyer clicked "Купить квартиру" (status_id === 3 "Забронировано")
+            if (statusId === 3 && buyerId) {
+                html += `
+                    <div class="notification-bar" style="background: rgba(245, 124, 0, 0.2); border: 1px solid #f57c00; border-radius: 8px; padding: 12px 16px; margin-bottom: 15px; display: flex; justify-content: space-between; align-items: center; box-shadow: 0 4px 6px rgba(0,0,0,0.15);">
+                        <div style="color: #fff; font-size: 0.95em;">
+                            <i class="fa-solid fa-cart-shopping" style="color: #ffb74d; margin-right: 8px;"></i>
+                            Покупатель <b>${escapeHtml(p.buyer_name || 'Неизвестный покупатель')}</b> подтвердил покупку объекта <b>${escapeHtml(p.title)}</b> (${escapeHtml(p.address || '')}). Завершите сделку!
+                        </div>
+                        <div style="display: flex; gap: 8px;">
+                            <button class="btn btn-success btn-xs" onclick="executeNotificationAction('finish_deal', ${pId})">Подтвердить сделку</button>
+                            <button class="btn btn-danger btn-xs" onclick="executeNotificationAction('decline_deal', ${pId})">Отклонить сделку</button>
+                        </div>
+                    </div>
+                `;
+            }
+            // Property Sold notification
+            if (statusId === 4 && !localStorage.getItem('dismissed_sold_' + pId)) {
+                html += `
+                    <div class="notification-bar" style="background: rgba(46, 125, 50, 0.2); border: 1px solid #2e7d32; border-radius: 8px; padding: 12px 16px; margin-bottom: 15px; display: flex; justify-content: space-between; align-items: center; box-shadow: 0 4px 6px rgba(0,0,0,0.15);">
+                        <div style="color: #fff; font-size: 0.95em;">
+                            <i class="fa-solid fa-circle-check" style="color: #81c784; margin-right: 8px;"></i>
+                            Сделка по объекту <b>${escapeHtml(p.title)}</b> успешно завершена! Объект официально продан.
+                        </div>
+                        <div>
+                            <button class="btn btn-primary btn-xs" onclick="dismissSoldNotification(${pId})">Ок</button>
+                        </div>
+                    </div>
+                `;
+            }
+        }
+
+        // 3. Buyer Notifications
+        if (isBuyer && buyerId === userId) {
+            // Property Sold notification
+            if (statusId === 4 && !localStorage.getItem('dismissed_sold_' + pId)) {
+                html += `
+                    <div class="notification-bar" style="background: rgba(46, 125, 50, 0.2); border: 1px solid #2e7d32; border-radius: 8px; padding: 12px 16px; margin-bottom: 15px; display: flex; justify-content: space-between; align-items: center; box-shadow: 0 4px 6px rgba(0,0,0,0.15);">
+                        <div style="color: #fff; font-size: 0.95em;">
+                            <i class="fa-solid fa-circle-check" style="color: #81c784; margin-right: 8px;"></i>
+                            Поздравляем! Ваша покупка объекта <b>${escapeHtml(p.title)}</b> (${escapeHtml(p.address || '')}) подтверждена. Квартира успешно приобретена!
+                        </div>
+                        <div>
+                            <button class="btn btn-primary btn-xs" onclick="dismissSoldNotification(${pId})">Ок</button>
+                        </div>
+                    </div>
+                `;
+            }
+        }
+    });
+
+    if (html === '') {
         container.style.display = 'none';
         container.innerHTML = '';
-        return;
+    } else {
+        container.style.display = 'block';
+        container.innerHTML = html;
     }
-
-    container.style.display = 'block';
-    container.innerHTML = pendingProposals.map(p => `
-        <div class="notification-bar" style="background: rgba(2, 136, 209, 0.2); border: 1px solid #0288d1; border-radius: 8px; padding: 12px 16px; margin-bottom: 15px; display: flex; justify-content: space-between; align-items: center; box-shadow: 0 4px 6px rgba(0,0,0,0.15);">
-            <div style="color: #fff; font-size: 0.95em;">
-                <i class="fa-solid fa-bell" style="color: #29b6f6; margin-right: 8px;"></i>
-                Риелтор <b>${escapeHtml(p.realtor_name || 'Неизвестный риелтор')}</b> предлагает вести объект <b>${escapeHtml(p.title)}</b> (${escapeHtml(p.address || '')})
-            </div>
-            <div style="display: flex; gap: 8px;">
-                <button class="btn btn-success btn-xs" onclick="acceptRealtorProposal(${p.id})">Принять</button>
-                <button class="btn btn-danger btn-xs" onclick="declineRealtorProposal(${p.id})">Отклонить</button>
-            </div>
-        </div>
-    `).join('');
 }
+
+window.dismissSoldNotification = (projectId) => {
+    localStorage.setItem('dismissed_sold_' + projectId, 'true');
+    checkRealtorProposals();
+};
+
+window.executeNotificationAction = async (action, projectId) => {
+    showLoader(true);
+    try {
+        const data = await apiFetch(`api/projects.php?id=${projectId}&action=${action}`, {
+            method: 'POST',
+            body: JSON.stringify({})
+        });
+        if (data.success) {
+            showToast(data.message, 'success');
+            await selectProject(projectId);
+            await loadProjects();
+        }
+    } catch (e) {
+        console.error(e);
+    } finally {
+        showLoader(false);
+    }
+};
 
 window.acceptRealtorProposal = async (projectId) => {
     showLoader(true);

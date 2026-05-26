@@ -121,7 +121,7 @@ if ($method === 'PUT') {
         if (!empty($targetRoles)) {
             // Удаляем старые связи
             $stmtDelRoles = $db->prepare("DELETE FROM user_roles WHERE user_id = ?");
-            $stmtDelRoles = $stmtDelRoles->execute([$id]);
+            $stmtDelRoles->execute([$id]);
             
             // Вставляем новые роли
             foreach ($targetRoles as $feRole) {
@@ -147,5 +147,78 @@ if ($method === 'PUT') {
             $db->rollBack();
         }
         sendResponse(false, 'Ошибка базы данных при обновлении пользователя: ' . $e->getMessage());
+    }
+}
+
+if ($method === 'DELETE') {
+    // ================= DELETE USER (ADMIN ONLY) =================
+    if (!isAdmin($user)) {
+        sendResponse(false, 'У вас нет прав администратора для совершения этой операции.', [], 403);
+    }
+    
+    if ($id <= 0) {
+        sendResponse(false, 'Не указан идентификатор пользователя.');
+    }
+    
+    // Запретить администратору удалять самого себя
+    if ($id === $user['id']) {
+        sendResponse(false, 'Вы не можете удалить собственную учетную запись.');
+    }
+    
+    try {
+        $db->beginTransaction();
+        
+        // 1. Удаляем связи с ролями в user_roles
+        $stmtDelRoles = $db->prepare("DELETE FROM user_roles WHERE user_id = ?");
+        $stmtDelRoles->execute([$id]);
+        
+        // 2. Очищаем привязки пользователя к недвижимости (как риелтора или покупателя)
+        $stmtClearRealtor = $db->prepare("UPDATE properties SET realtor_id = NULL, realtor_accepted = 0 WHERE realtor_id = ?");
+        $stmtClearRealtor->execute([$id]);
+        
+        $stmtClearBuyer = $db->prepare("UPDATE properties SET buyer_id = NULL, buyer_approved = 0 WHERE buyer_id = ?");
+        $stmtClearBuyer->execute([$id]);
+        
+        // 3. Удаляем из property_agents
+        $stmtDelAgents = $db->prepare("DELETE FROM property_agents WHERE user_id = ?");
+        $stmtDelAgents->execute([$id]);
+        
+        // 4. Удаляем записи из истории смены статусов
+        $stmtDelHistory = $db->prepare("DELETE FROM property_status_history WHERE changed_by = ?");
+        $stmtDelHistory->execute([$id]);
+        
+        // 5. Удаляем объявленные им объекты (если он создатель/продавец)
+        $stmtProps = $db->prepare("SELECT id FROM properties WHERE creator_id = ?");
+        $stmtProps->execute([$id]);
+        $propIds = $stmtProps->fetchAll(PDO::FETCH_COLUMN);
+        
+        if (!empty($propIds)) {
+            $inClause = implode(',', array_fill(0, count($propIds), '?'));
+            
+            // Удаляем историю для этих объектов
+            $stmtDelHistoryProps = $db->prepare("DELETE FROM property_status_history WHERE property_id IN ($inClause)");
+            $stmtDelHistoryProps->execute($propIds);
+            
+            // Удаляем агентов для этих объектов
+            $stmtDelAgentsProps = $db->prepare("DELETE FROM property_agents WHERE property_id IN ($inClause)");
+            $stmtDelAgentsProps->execute($propIds);
+            
+            // Удаляем сами объекты
+            $stmtDelProps = $db->prepare("DELETE FROM properties WHERE creator_id = ?");
+            $stmtDelProps->execute([$id]);
+        }
+        
+        // 6. Удаляем самого пользователя
+        $stmtDelUser = $db->prepare("DELETE FROM users WHERE id = ?");
+        $stmtDelUser->execute([$id]);
+        
+        $db->commit();
+        sendResponse(true, 'Пользователь успешно удален.');
+        
+    } catch (PDOException $e) {
+        if ($db->inTransaction()) {
+            $db->rollBack();
+        }
+        sendResponse(false, 'Ошибка базы данных при удалении пользователя: ' . $e->getMessage());
     }
 }

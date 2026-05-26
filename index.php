@@ -366,20 +366,23 @@ header("Pragma: no-cache");
                                     </button>
                                     <button id="btn-buy-property" class="btn btn-primary btn-sm btn-block hidden"
                                         style="width: 100%; background-color: #1565c0; border-color: #1565c0; color: #fff; padding: 10px 16px; font-size: 1.1em;">
-                                        <i class="fa-solid fa-eye" style="margin-right: 8px;"></i>Хочу посмотреть
+                                        <i class="fa-solid fa-calendar-check" style="margin-right: 8px;"></i>Записаться на просмотр
                                     </button>
                                     <button id="btn-confirm-deal" class="btn btn-success btn-sm hidden"
                                         style="flex: 1; min-width: 150px; background-color: #2e7d32; border-color: #2e7d32; color: #fff;">
-                                        <i class="fa-solid fa-check" style="margin-right: 6px;"></i>Разрешить просмотр
+                                        <i class="fa-solid fa-check" style="margin-right: 6px;"></i>Подтвердить просмотр
                                     </button>
                                     <button id="btn-confirm-purchase" class="btn btn-success btn-sm btn-block hidden"
                                         style="width: 100%; background-color: #2e7d32; border-color: #2e7d32; color: #fff; padding: 10px 16px; font-size: 1.1em;">
-                                        <i class="fa-solid fa-cart-shopping" style="margin-right: 8px;"></i>Подтвердить
-                                        покупку
+                                        <i class="fa-solid fa-cart-shopping" style="margin-right: 8px;"></i>Купить квартиру
+                                    </button>
+                                    <button id="btn-finish-deal" class="btn btn-success btn-sm hidden"
+                                        style="flex: 1; min-width: 150px; background-color: #2e7d32; border-color: #2e7d32; color: #fff;">
+                                        <i class="fa-solid fa-handshake" style="margin-right: 6px;"></i>Подтвердить сделку
                                     </button>
                                     <button id="btn-decline-deal" class="btn btn-danger btn-sm hidden"
                                         style="flex: 1; min-width: 150px; background-color: #c62828; border-color: #c62828; color: #fff;">
-                                        <i class="fa-solid fa-ban" style="margin-right: 6px;"></i>Отклонить бронь
+                                        <i class="fa-solid fa-ban" style="margin-right: 6px;"></i>Отменить запись / бронь
                                     </button>
                                 </div>
 
@@ -454,6 +457,7 @@ header("Pragma: no-cache");
                                     <th>Телефон / Компания</th>
                                     <th>Роль</th>
                                     <th>Активность</th>
+                                    <th>Удалить</th>
                                     <th>Действие</th>
                                 </tr>
                             </thead>

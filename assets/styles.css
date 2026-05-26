@@ -6,29 +6,29 @@
     --bg-card: rgba(22, 30, 49, 0.45);
     --border-color: rgba(255, 255, 255, 0.08);
     --border-hover: rgba(255, 255, 255, 0.15);
-    
+
     --text-primary: #f3f4f6;
     --text-secondary: #9ca3af;
     --text-muted: #6b7280;
-    
+
     --primary: #6366f1;
     --primary-hover: #4f46e5;
     --primary-glow: rgba(99, 102, 241, 0.15);
-    
+
     --accent: #8b5cf6;
     --accent-hover: #7c3aed;
-    
+
     --success: #10b981;
     --success-bg: rgba(16, 185, 129, 0.12);
     --warning: #f59e0b;
     --warning-bg: rgba(245, 158, 11, 0.12);
     --danger: #ef4444;
     --danger-bg: rgba(239, 68, 68, 0.12);
-    
+
     --shadow-sm: 0 2px 8px rgba(0, 0, 0, 0.2);
     --shadow-md: 0 8px 30px rgba(0, 0, 0, 0.3);
     --shadow-lg: 0 16px 40px rgba(0, 0, 0, 0.4);
-    
+
     --transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
     --font-sans: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
     --font-display: 'Outfit', sans-serif;
@@ -50,7 +50,12 @@ body {
     min-height: 100vh;
 }
 
-h1, h2, h3, h4, h5, h6 {
+h1,
+h2,
+h3,
+h4,
+h5,
+h6 {
     font-family: var(--font-display);
     font-weight: 600;
     letter-spacing: -0.02em;
@@ -66,7 +71,9 @@ a:hover {
     color: var(--primary-hover);
 }
 
-input, select, textarea {
+input,
+select,
+textarea {
     background-color: rgba(0, 0, 0, 0.2);
     border: 1px solid var(--border-color);
     border-radius: 8px;
@@ -78,7 +85,23 @@ input, select, textarea {
     transition: var(--transition);
 }
 
-input:focus, select:focus, textarea:focus {
+select option {
+    background-color: #1a1e2e;
+    color: var(--text-primary);
+}
+
+select option:hover,
+select option:focus,
+select option:active,
+select option:checked {
+    background-color: var(--primary) !important;
+    background: var(--primary) !important;
+    color: #ffffff !important;
+}
+
+input:focus,
+select:focus,
+textarea:focus {
     border-color: var(--primary);
     outline: none;
     box-shadow: 0 0 0 3px var(--primary-glow);
@@ -93,8 +116,13 @@ input::placeholder {
     display: none !important;
 }
 
-.text-center { text-align: center; }
-.text-right { text-align: right; }
+.text-center {
+    text-align: center;
+}
+
+.text-right {
+    text-align: right;
+}
 
 .badge {
     display: inline-block;
@@ -106,10 +134,25 @@ input::placeholder {
     letter-spacing: 0.05em;
 }
 
-.badge-idea { background: rgba(156, 163, 175, 0.15); color: #d1d5db; }
-.badge-work { background: rgba(59, 130, 246, 0.15); color: #60a5fa; }
-.badge-review { background: rgba(245, 158, 11, 0.15); color: #fbbf24; }
-.badge-completed { background: rgba(16, 185, 129, 0.15); color: #34d399; }
+.badge-idea {
+    background: rgba(156, 163, 175, 0.15);
+    color: #d1d5db;
+}
+
+.badge-work {
+    background: rgba(59, 130, 246, 0.15);
+    color: #60a5fa;
+}
+
+.badge-review {
+    background: rgba(245, 158, 11, 0.15);
+    color: #fbbf24;
+}
+
+.badge-completed {
+    background: rgba(16, 185, 129, 0.15);
+    color: #34d399;
+}
 
 /* Кнопки */
 .btn {
@@ -222,8 +265,13 @@ input::placeholder {
 }
 
 @keyframes float {
-    0% { transform: translate(0, 0) scale(1); }
-    100% { transform: translate(50px, 50px) scale(1.1); }
+    0% {
+        transform: translate(0, 0) scale(1);
+    }
+
+    100% {
+        transform: translate(50px, 50px) scale(1.1);
+    }
 }
 
 .auth-container {
@@ -299,7 +347,8 @@ input::placeholder {
     color: var(--text-muted);
 }
 
-.input-wrapper input, .input-wrapper select {
+.input-wrapper input,
+.input-wrapper select {
     padding-left: 40px;
 }
 
@@ -444,8 +493,15 @@ input::placeholder {
 }
 
 @keyframes fadeIn {
-    from { opacity: 0; transform: translateY(10px); }
-    to { opacity: 1; transform: translateY(0); }
+    from {
+        opacity: 0;
+        transform: translateY(10px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
 }
 
 /* Сетка статистики */
@@ -490,10 +546,25 @@ input::placeholder {
     font-size: 1.3rem;
 }
 
-.icon-blue { background: rgba(59, 130, 246, 0.12); color: #3b82f6; }
-.icon-orange { background: rgba(245, 158, 11, 0.12); color: #f59e0b; }
-.icon-green { background: rgba(16, 185, 129, 0.12); color: #10b981; }
-.icon-purple { background: rgba(139, 92, 246, 0.12); color: #8b5cf6; }
+.icon-blue {
+    background: rgba(59, 130, 246, 0.12);
+    color: #3b82f6;
+}
+
+.icon-orange {
+    background: rgba(245, 158, 11, 0.12);
+    color: #f59e0b;
+}
+
+.icon-green {
+    background: rgba(16, 185, 129, 0.12);
+    color: #10b981;
+}
+
+.icon-purple {
+    background: rgba(139, 92, 246, 0.12);
+    color: #8b5cf6;
+}
 
 .stat-details h3 {
     font-size: 1.6rem;
@@ -588,12 +659,12 @@ input::placeholder {
     transition: var(--transition);
 }
 
-.checkbox-label input:checked + .checkbox-custom {
+.checkbox-label input:checked+.checkbox-custom {
     background-color: var(--primary);
     border-color: var(--primary);
 }
 
-.checkbox-label input:checked + .checkbox-custom::after {
+.checkbox-label input:checked+.checkbox-custom::after {
     content: "\f00c";
     font-family: "Font Awesome 6 Free";
     font-weight: 900;
@@ -764,7 +835,9 @@ input::placeholder {
     margin-bottom: 20px;
 }
 
-.info-section h4, .team-section h4, .history-section h4 {
+.info-section h4,
+.team-section h4,
+.history-section h4 {
     font-size: 0.85rem;
     color: var(--text-secondary);
     text-transform: uppercase;
@@ -878,9 +951,20 @@ input::placeholder {
     font-weight: 600;
 }
 
-.role-supervisor { background: rgba(16, 185, 129, 0.12); color: #34d399; }
-.role-teamlead { background: rgba(139, 92, 246, 0.12); color: #c084fc; }
-.role-member { background: rgba(59, 130, 246, 0.12); color: #60a5fa; }
+.role-supervisor {
+    background: rgba(16, 185, 129, 0.12);
+    color: #34d399;
+}
+
+.role-teamlead {
+    background: rgba(139, 92, 246, 0.12);
+    color: #c084fc;
+}
+
+.role-member {
+    background: rgba(59, 130, 246, 0.12);
+    color: #60a5fa;
+}
 
 .member-actions {
     display: flex;
@@ -1090,11 +1174,11 @@ input::placeholder {
     border-radius: 50%;
 }
 
-input:checked + .slider {
+input:checked+.slider {
     background-color: var(--success);
 }
 
-input:checked + .slider:before {
+input:checked+.slider:before {
     transform: translateX(16px);
 }
 
@@ -1130,8 +1214,15 @@ input:checked + .slider:before {
 }
 
 @keyframes modalSlide {
-    from { opacity: 0; transform: translateY(-20px) scale(0.95); }
-    to { opacity: 1; transform: translateY(0) scale(1); }
+    from {
+        opacity: 0;
+        transform: translateY(-20px) scale(0.95);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0) scale(1);
+    }
 }
 
 .modal-header {
@@ -1234,21 +1325,44 @@ input:checked + .slider:before {
 }
 
 @keyframes toastIn {
-    from { opacity: 0; transform: translateX(50px); }
-    to { opacity: 1; transform: translateX(0); }
+    from {
+        opacity: 0;
+        transform: translateX(50px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateX(0);
+    }
 }
 
-.toast.toast-success { border-left-color: var(--success); }
-.toast.toast-warning { border-left-color: var(--warning); }
-.toast.toast-danger { border-left-color: var(--danger); }
+.toast.toast-success {
+    border-left-color: var(--success);
+}
+
+.toast.toast-warning {
+    border-left-color: var(--warning);
+}
+
+.toast.toast-danger {
+    border-left-color: var(--danger);
+}
 
 .toast-icon {
     font-size: 1.1rem;
 }
 
-.toast-success .toast-icon { color: var(--success); }
-.toast-warning .toast-icon { color: var(--warning); }
-.toast-danger .toast-icon { color: var(--danger); }
+.toast-success .toast-icon {
+    color: var(--success);
+}
+
+.toast-warning .toast-icon {
+    color: var(--warning);
+}
+
+.toast-danger .toast-icon {
+    color: var(--danger);
+}
 
 .toast-message {
     font-size: 0.85rem;
@@ -1282,26 +1396,32 @@ input:checked + .slider:before {
 }
 
 @keyframes spin {
-    to { transform: rotate(360deg); }
+    to {
+        transform: rotate(360deg);
+    }
 }
 
 /* Compact overrides for project modal form */
 .modal-body {
     padding: 12px 20px 8px 20px;
 }
+
 .modal-body .form-group {
     margin-bottom: 10px;
 }
+
 .modal-body .form-group label {
     margin-bottom: 3px;
     font-size: 0.8rem;
 }
-.modal-body input, 
-.modal-body select, 
+
+.modal-body input,
+.modal-body select,
 .modal-body textarea {
     padding: 6px 10px;
     font-size: 0.85rem;
 }
+
 .modal-footer {
     padding: 10px 20px;
 }

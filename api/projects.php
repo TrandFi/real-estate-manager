@@ -279,7 +279,7 @@ if ($method === 'POST') {
             if ((int)$proj['realtor_id'] !== (int)$user['id']) {
                 sendResponse(false, 'Вы не назначены риелтором для этого объекта.', [], 403);
             }
-            $stmtUpdate = $db->prepare("UPDATE properties SET realtor_accepted = 1, status_id = 2 WHERE id = ?");
+            $stmtUpdate = $db->prepare("UPDATE properties SET realtor_accepted = 1, status_id = 2, progress_percent = 30 WHERE id = ?");
             $stmtUpdate->execute([$id]);
             
             // Добавляем риелтора как lead_agent в property_agents
@@ -381,7 +381,7 @@ if ($method === 'POST') {
             }
             
             // Accept realtor and change status to 2 (Готов к просмотру)
-            $stmtUpdate = $db->prepare("UPDATE properties SET realtor_accepted = 1, status_id = 2 WHERE id = ?");
+            $stmtUpdate = $db->prepare("UPDATE properties SET realtor_accepted = 1, status_id = 2, progress_percent = 30 WHERE id = ?");
             $stmtUpdate->execute([$id]);
             
             // Add realtor to property_agents
@@ -537,16 +537,19 @@ if ($method === 'POST') {
             if ((int)$proj['status_id'] !== 2) {
                 sendResponse(false, 'Объект должен быть в статусе "Готов к просмотру".', [], 400);
             }
+            if (empty($proj['buyer_id'])) {
+                sendResponse(false, 'Для объекта не назначен покупатель.', [], 400);
+            }
             
-            // Update status to 3 (Забронировано)
-            $stmtUpdate = $db->prepare("UPDATE properties SET status_id = 3 WHERE id = ?");
+            // Update status to 5 (На просмотре) and progress to 50
+            $stmtUpdate = $db->prepare("UPDATE properties SET status_id = 5, progress_percent = 50 WHERE id = ?");
             $stmtUpdate->execute([$id]);
             
-            $stmtHistory = $db->prepare("INSERT INTO property_status_history (property_id, status_id, changed_by, changed_at) VALUES (?, 3, ?, NOW())");
+            $stmtHistory = $db->prepare("INSERT INTO property_status_history (property_id, status_id, changed_by, changed_at) VALUES (?, 5, ?, NOW())");
             $stmtHistory->execute([$id, $user['id']]);
             
             $db->commit();
-            sendResponse(true, 'Просмотр разрешен. Объект переведен в статус "Забронировано".');
+            sendResponse(true, 'Запись на просмотр подтверждена. Объект переведен в статус "На просмотре".');
         } catch (PDOException $e) {
             $db->rollBack();
             sendResponse(false, 'Ошибка базы данных: ' . $e->getMessage());
@@ -570,19 +573,55 @@ if ($method === 'POST') {
             if ((int)$proj['buyer_id'] !== (int)$user['id']) {
                 sendResponse(false, 'Вы не являетесь покупателем этого объекта.', [], 403);
             }
+            if ((int)$proj['status_id'] !== 5) {
+                sendResponse(false, 'Объект должен быть в статусе "На просмотре".', [], 400);
+            }
+            
+            // Update status to 3 (Забронировано) and progress to 80
+            $stmtUpdate = $db->prepare("UPDATE properties SET status_id = 3, buyer_approved = 1, progress_percent = 80 WHERE id = ?");
+            $stmtUpdate->execute([$id]);
+            
+            $stmtHistory = $db->prepare("INSERT INTO property_status_history (property_id, status_id, changed_by, changed_at) VALUES (?, 3, ?, NOW())");
+            $stmtHistory->execute([$id, $user['id']]);
+            
+            $db->commit();
+            sendResponse(true, 'Запрос на покупку отправлен. Объект забронирован.');
+        } catch (PDOException $e) {
+            $db->rollBack();
+            sendResponse(false, 'Ошибка базы данных: ' . $e->getMessage());
+        }
+    }
+    elseif ($action === 'finish_deal') {
+        if ($id <= 0) {
+            sendResponse(false, 'Не указан идентификатор объекта.');
+        }
+        if (!in_array('realtor', $user['roles'])) {
+            sendResponse(false, 'Только риелторы могут завершать сделку.', [], 403);
+        }
+        try {
+            $db->beginTransaction();
+            $stmtCheck = $db->prepare("SELECT realtor_id, buyer_id, status_id FROM properties WHERE id = ?");
+            $stmtCheck->execute([$id]);
+            $proj = $stmtCheck->fetch();
+            if (!$proj) {
+                sendResponse(false, 'Объект не найден.', [], 404);
+            }
+            if ((int)$proj['realtor_id'] !== (int)$user['id']) {
+                sendResponse(false, 'Вы не являетесь риелтором для этого объекта.', [], 403);
+            }
             if ((int)$proj['status_id'] !== 3) {
                 sendResponse(false, 'Объект должен быть в статусе "Забронировано".', [], 400);
             }
             
-            // Update status to 4 (Продано) and buyer_approved = 1
-            $stmtUpdate = $db->prepare("UPDATE properties SET buyer_approved = 1, status_id = 4, progress_percent = 100 WHERE id = ?");
+            // Update status to 4 (Продано) and progress to 100
+            $stmtUpdate = $db->prepare("UPDATE properties SET status_id = 4, progress_percent = 100 WHERE id = ?");
             $stmtUpdate->execute([$id]);
             
             $stmtHistory = $db->prepare("INSERT INTO property_status_history (property_id, status_id, changed_by, changed_at) VALUES (?, 4, ?, NOW())");
             $stmtHistory->execute([$id, $user['id']]);
             
             $db->commit();
-            sendResponse(true, 'Покупка подтверждена. Объект успешно продан!');
+            sendResponse(true, 'Сделка успешно завершена! Объект официально продан.');
         } catch (PDOException $e) {
             $db->rollBack();
             sendResponse(false, 'Ошибка базы данных: ' . $e->getMessage());
@@ -597,7 +636,7 @@ if ($method === 'POST') {
         }
         try {
             $db->beginTransaction();
-            $stmtCheck = $db->prepare("SELECT realtor_id, buyer_id FROM properties WHERE id = ?");
+            $stmtCheck = $db->prepare("SELECT realtor_id, buyer_id, status_id FROM properties WHERE id = ?");
             $stmtCheck->execute([$id]);
             $proj = $stmtCheck->fetch();
             if (!$proj) {
@@ -610,17 +649,19 @@ if ($method === 'POST') {
                 sendResponse(false, 'Для объекта еще не выбран покупатель.', [], 400);
             }
             
+            // Delete buyer agent link
             $stmtDelBuyer = $db->prepare("DELETE FROM property_agents WHERE property_id = ? AND user_id = ? AND role = 'buyer'");
             $stmtDelBuyer->execute([$id, $proj['buyer_id']]);
             
-            $stmtUpdate = $db->prepare("UPDATE properties SET buyer_id = NULL, buyer_approved = 0, status_id = 1 WHERE id = ?");
+            // Revert status to 2 (Готов к просмотру) and clear buyer
+            $stmtUpdate = $db->prepare("UPDATE properties SET buyer_id = NULL, buyer_approved = 0, status_id = 2, progress_percent = 30 WHERE id = ?");
             $stmtUpdate->execute([$id]);
             
-            $stmtHistory = $db->prepare("INSERT INTO property_status_history (property_id, status_id, changed_by, changed_at) VALUES (?, 1, ?, NOW())");
+            $stmtHistory = $db->prepare("INSERT INTO property_status_history (property_id, status_id, changed_by, changed_at) VALUES (?, 2, ?, NOW())");
             $stmtHistory->execute([$id, $user['id']]);
             
             $db->commit();
-            sendResponse(true, 'Запрос отклонен. Объект возвращен в статус "Создано".');
+            sendResponse(true, 'Запись/сделка отклонена. Объект возвращен в статус "Готов к просмотру".');
         } catch (PDOException $e) {
             $db->rollBack();
             sendResponse(false, 'Ошибка базы данных: ' . $e->getMessage());
@@ -857,12 +898,9 @@ if ($method === 'PUT') {
 
         $isCreator = (int)$existingProj['creator_id'] === (int)$user['id'];
         $isAssignedRealtor = in_array('realtor', $user['roles']) && (int)$existingProj['realtor_id'] === (int)$user['id'] && (int)$existingProj['realtor_accepted'] === 1;
+        $isAdmin = in_array('admin', $user['roles']);
         
-        if (in_array('admin', $user['roles'])) {
-            sendResponse(false, 'Администратор не может изменять данные об объектах.', [], 403);
-        }
-        
-        if (!$isCreator && !$isAssignedRealtor) {
+        if (!$isAdmin && !$isCreator && !$isAssignedRealtor) {
             sendResponse(false, 'У вас недостаточно прав для редактирования этого объекта.', [], 403);
         }
         
@@ -1003,12 +1041,9 @@ if ($method === 'DELETE') {
 
         $isCreator = (int)$existingProj['creator_id'] === (int)$user['id'];
         $isAssignedRealtor = in_array('realtor', $user['roles']) && (int)$existingProj['realtor_id'] === (int)$user['id'] && (int)$existingProj['realtor_accepted'] === 1;
+        $isAdmin = in_array('admin', $user['roles']);
 
-        if (in_array('admin', $user['roles'])) {
-            sendResponse(false, 'Администратор не может удалять объекты.', [], 403);
-        }
-
-        if (!$isCreator && !$isAssignedRealtor) {
+        if (!$isAdmin && !$isCreator && !$isAssignedRealtor) {
             sendResponse(false, 'У вас недостаточно прав для удаления этого объекта.', [], 403);
         }
         

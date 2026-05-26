@@ -69,7 +69,7 @@
 | **`users`** | Хранит учетные записи пользователей: ФИО, email, хэшированный пароль (bcrypt), контактную информацию (телефон/агентство в поле `meta_info`) и флаг активности (`is_active`). | Данные студентов/преподавателей, группа или кафедра. |
 | **`roles`** | Справочник глобальных системных ролей: `admin` (администратор), `agent` (риелтор/агент), `client` (клиент/покупатель). | Роли: `admin`, `teacher`, `student`. |
 | **`user_roles`** | Таблица связи глобальных ролей пользователей (отношение «многие-ко-многим»). | Связь пользователей с глобальными ролями. |
-| **`property_statuses`** | Справочник стадий продажи объекта недвижимости: «Черновик» (Draft), «Активно» (Active), «Забронировано» (Under Offer), «Продано» (Sold). | Статусы проектов: идея, в работе, на проверке, завершен. |
+| **`property_statuses`** | Справочник стадий продажи объекта недвижимости: «Создано» (1), «Готов к просмотру» (2), «На просмотре» (5), «Забронировано» (3), «Продано» (4). | Статусы проектов: идея, в работе, на проверке, завершен. |
 | **`properties`** | Карточки объявлений недвижимости: адрес/название, описание параметров, создатель, текущий статус сделки, процент оформления документов, даты публикации и ссылка на 3D-тур/фото (поле `repository_link`). | Карточки проектов: название, описание, создатель, статус, процент выполнения, репозиторий. |
 | **`property_agents`** | Таблица назначения участников на сделку. Связывает пользователей с объектами недвижимости и хранит роль участника внутри сделки: `lead_agent` (ведущий агент), `co_agent` (со-риелтор), `buyer` (клиент/покупатель). | Связь пользователей с проектами, роли внутри проекта: supervisor, teamlead, member. |
 | **`property_status_history`** | История изменения стадий продажи. Фиксирует изменения статусов объекта недвижимости и ID пользователя, выполнившего операцию, с временной меткой. | Журнал смены стадий проекта. |
@@ -165,6 +165,10 @@ CREATE TABLE property_status_history (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 ```
 
+Рисунок 2 – Структура базы данных
+
+Рисунок 3 – Пример данных в базе
+
 
 
 # 2. Документация к API
@@ -173,7 +177,7 @@ CREATE TABLE property_status_history (
 
 Все серверные скрипты возвращают данные в едином формате JSON. В случае успешного завершения запроса возвращается параметр `"success": true` и запрошенные данные; при возникновении ошибки возвращается `"success": false` и описание ошибки в строковом свойстве `"message"`.
 
-Серверная часть функционирует на базе прозрачного адаптационного слоя: она принимает и отдает параметры, ожидаемые исходным JavaScript-кодом клиентской части (проекты, группы, роли «student»/«teacher»), но производит операции над таблицами новой базы данных недвижимости (объявления `properties`, контактные данные `meta_info`, роли `client` (покупатель) / `agent` (риелтор)).
+Серверная часть функционирует на базе прозрачного адаптационного слоя: она принимает и отдает параметры, ожидаемые исходным JavaScript-кодом клиентской части (роли, статусы, информацию о сделках), производя операции над таблицами базы данных недвижимости (объявления `properties`, контактные данные `meta_info`, роли `buyer` (покупатель), `seller` (продавец), `realtor` (риелтор) и `admin` (администратор)).
 
 ---
 
@@ -250,7 +254,7 @@ function getCurrentUser($db) {
 | **GET** | `api/auth.php?action=me` | Возвращает информацию и роли текущего авторизованного пользователя. |
 
 ### Подробности реализации:
-1. **Регистрация**: Значение поля `group_name` записывается в столбец базы данных `meta_info` таблицы `users`. Для роли риелтора/агента здесь может храниться контактный телефон или название агентства. Локальная роль клиента/покупателя сопоставляется с `student`, а агента/риелтора — с `teacher`. Пароль надежно хэшируется через стандартный односторонний алгоритм BCrypt (`password_hash($password, PASSWORD_BCRYPT)`).
+1. **Регистрация**: Значение поля `group_name` записывается в столбец базы данных `meta_info` таблицы `users`. Для роли риелтора/агента здесь может храниться контактный телефон или название агентства. Система принимает три роли пользователей: `buyer` (покупатель), `seller` (продавец) и `realtor` (риелтор). Пароль надежно хэшируется через стандартный односторонний алгоритм BCrypt (`password_hash($password, PASSWORD_BCRYPT)`).
 2. **Вход**: Скрипт выбирает запись пользователя из БД по email, осуществляет сверку хэша методом `password_verify()` и проверяет флаг активности учетной записи `is_active = 1`. При совпадении данных ID пользователя записывается в `$_SESSION['user_id']`.
 
 ### Ключевые фрагменты кода:
@@ -264,17 +268,19 @@ $stmtInsert = $db->prepare("
 $stmtInsert->execute([$fullName, $email, $passwordHash, $groupName]);
 $userId = $db->lastInsertId();
 
-$dbRoleName = 'client';
-if ($roleSlug === 'teacher') {
-    $dbRoleName = 'agent';
-} elseif ($roleSlug === 'admin') {
-    $dbRoleName = 'admin';
+// Проверяем корректность роли
+$dbRoleName = $roleSlug;
+if (!in_array($dbRoleName, ['realtor', 'buyer', 'seller'])) {
+    $dbRoleName = 'buyer';
 }
 
+// Получаем id роли в БД
 $stmtRole = $db->prepare("SELECT id FROM roles WHERE name = ?");
 $stmtRole->execute([$dbRoleName]);
-$roleId = $stmtRole->fetchColumn() ?: 3;
+$role = $stmtRole->fetch();
+$roleId = $role ? $role['id'] : 2; // По умолчанию buyer (2)
 
+// Связываем пользователя с его глобальной ролью
 $stmtUserRole = $db->prepare("INSERT INTO user_roles (user_id, role_id) VALUES (?, ?)");
 $stmtUserRole->execute([$userId, $roleId]);
 ```
@@ -288,10 +294,10 @@ $stmtUserRole->execute([$userId, $roleId]);
 ```json
 {
   "full_name": "Иванов Иван Иванович",
-  "email": "student@example.com",
+  "email": "buyer@example.com",
   "password": "password",
-  "group_name": "СО241КОБ",
-  "role_slug": "student"
+  "group_name": "+7 (999) 111-22-33, Главный офис",
+  "role_slug": "buyer"
 }
 ```
 *HTTP-ответ сервера:*
@@ -302,11 +308,11 @@ $stmtUserRole->execute([$userId, $roleId]);
   "user": {
     "id": 1,
     "full_name": "Иванов Иван Иванович",
-    "email": "student@example.com",
-    "group_name": "СО241КОБ",
+    "email": "buyer@example.com",
+    "group_name": "+7 (999) 111-22-33, Главный офис",
     "is_active": 1,
     "roles": [
-      "student"
+      "buyer"
     ]
   }
 }
@@ -318,7 +324,7 @@ $stmtUserRole->execute([$userId, $roleId]);
 *Тело запроса (Body JSON):*
 ```json
 {
-  "email": "student@example.com",
+  "email": "buyer@example.com",
   "password": "password"
 }
 ```
@@ -330,11 +336,11 @@ $stmtUserRole->execute([$userId, $roleId]);
   "user": {
     "id": 1,
     "full_name": "Иванов Иван Иванович",
-    "email": "student@example.com",
-    "group_name": "СО241КОБ",
+    "email": "buyer@example.com",
+    "group_name": "+7 (999) 111-22-33, Главный офис",
     "is_active": 1,
     "roles": [
-      "student"
+      "buyer"
     ]
   }
 }
@@ -350,11 +356,11 @@ $stmtUserRole->execute([$userId, $roleId]);
   "user": {
     "id": 1,
     "full_name": "Иванов Иван Иванович",
-    "email": "student@example.com",
-    "group_name": "СО241КОБ",
+    "email": "buyer@example.com",
+    "group_name": "+7 (999) 111-22-33, Главный офис",
     "is_active": 1,
     "roles": [
-      "student"
+      "buyer"
     ]
   }
 }
@@ -373,10 +379,10 @@ $stmtUserRole->execute([$userId, $roleId]);
 
 ### Размещение скриншотов
 > **[Скриншот 2 — Форма регистрации учетной записи]**
-> *Данные для воспроизведения:* Откройте страницу сайта. Перейдите по ссылке «Зарегистрироваться». Заполните форму: ФИО = «Иванов Иван Иванович», Email = «student@example.com», Пароль = «password», Группа = «СО241КОБ», Роль = «Студент» (что соответствует глобальной роли «Клиент»). Нажмите «Зарегистрироваться». Сделайте снимок формы до нажатия.
+> *Данные для воспроизведения:* Откройте страницу сайта. Перейдите по ссылке «Зарегистрироваться». Заполните форму: ФИО = «Иванов Иван Иванович», Email = «buyer@example.com», Пароль = «password», Контакты = «+7 (999) 111-22-33, Главный офис», Роль = «Покупатель» (buyer). Нажмите «Зарегистрироваться». Сделайте снимок формы до нажатия.
 
 > **[Скриншот 3 — Форма входа в личный кабинет]**
-> *Данные для воспроизведения:* Нажмите на ссылку «Войти». Введите зарегистрированный email `student@example.com` и пароль `password`. Сделайте снимок формы.
+> *Данные для воспроизведения:* Нажмите на ссылку «Войти». Введите зарегистрированный email `buyer@example.com` и пароль `password`. Сделайте снимок формы.
 
 ---
 
@@ -484,15 +490,15 @@ if ($oldStatusId !== $statusId) {
     {
       "user_id": 1,
       "full_name": "Иванов Иван Иванович",
-      "email": "student@example.com",
-      "group_name": "СО241КОБ",
+      "email": "buyer@example.com",
+      "group_name": "+7 (999) 111-22-33, Главный офис",
       "project_role": "teamlead"
     },
     {
       "user_id": 2,
       "full_name": "Смирнова Елена Сергеевна",
-      "email": "agent@example.com",
-      "group_name": "ООО Мегаполис",
+      "email": "realtor@example.com",
+      "group_name": "+7 (999) 222-33-44, ООО Мегаполис",
       "project_role": "member"
     }
   ]
@@ -518,15 +524,15 @@ if ($oldStatusId !== $statusId) {
     {
       "user_id": 1,
       "full_name": "Иванов Иван Иванович",
-      "email": "student@example.com",
-      "group_name": "СО241КОБ",
+      "email": "buyer@example.com",
+      "group_name": "+7 (999) 111-22-33, Главный офис",
       "project_role": "teamlead"
     },
     {
       "user_id": 2,
       "full_name": "Смирнова Елена Сергеевна",
-      "email": "agent@example.com",
-      "group_name": "ООО Мегаполис",
+      "email": "realtor@example.com",
+      "group_name": "+7 (999) 222-33-44, ООО Мегаполис",
       "project_role": "teamlead"
     }
   ]
@@ -556,15 +562,15 @@ if ($oldStatusId !== $statusId) {
       {
         "user_id": 1,
         "full_name": "Иванов Иван Иванович",
-        "email": "student@example.com",
-        "group_name": "СО241КОБ",
+        "email": "buyer@example.com",
+        "group_name": "+7 (999) 111-22-33, Главный офис",
         "project_role": "teamlead"
       },
       {
         "user_id": 2,
         "full_name": "Смирнова Елена Сергеевна",
-        "email": "agent@example.com",
-        "group_name": "ООО Мегаполис",
+        "email": "realtor@example.com",
+        "group_name": "+7 (999) 222-33-44, ООО Мегаполис",
         "project_role": "teamlead"
       }
     ],
@@ -660,21 +666,21 @@ try {
     {
       "id": 1,
       "full_name": "Иванов Иван Иванович",
-      "email": "student@example.com",
-      "group_name": "СО241КОБ",
+      "email": "buyer@example.com",
+      "group_name": "+7 (999) 111-22-33, Главный офис",
       "is_active": 1,
       "roles": [
-        "student"
+        "buyer"
       ]
     },
     {
       "id": 2,
       "full_name": "Смирнова Елена Сергеевна",
-      "email": "agent@example.com",
-      "group_name": "ООО Мегаполис",
+      "email": "realtor@example.com",
+      "group_name": "+7 (999) 222-33-44, ООО Мегаполис",
       "is_active": 1,
       "roles": [
-        "teacher"
+        "realtor"
       ]
     }
   ]
@@ -688,7 +694,8 @@ try {
 ```json
 {
   "roles": [
-    "admin"
+    "admin",
+    "realtor"
   ],
   "is_active": 1
 }
@@ -704,3 +711,4 @@ try {
 ### Размещение скриншотов
 > **[Скриншот 6 — Панель администрирования учетных записей]**
 > *Данные для воспроизведения:* Войдите под администратором (`admin`). Откройте вкладку «Администрирование» в верхнем навигационном меню. Перед вами откроется список зарегистрированных пользователей, выбор их ролей из выпадающего списка и ползунки активации/деактивации аккаунтов. Сделайте снимок экрана этой панели.
+
