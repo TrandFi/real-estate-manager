@@ -804,8 +804,8 @@ if ($method === 'POST') {
             $stmtSellerAgent = $db->prepare("INSERT INTO property_agents (property_id, user_id, role) VALUES (?, ?, 'seller')");
             $stmtSellerAgent->execute([$projectId, $user['id']]);
             
-            // Если риелтор назначен и уже подтвердил, добавляем его в участники
-            if ($realtorId && $realtorAccepted === 1) {
+            // Если риелтор назначен и уже подтвердил, добавляем его в участники (исключая создателя)
+            if ($realtorId && $realtorAccepted === 1 && $realtorId !== (int)$user['id']) {
                 $stmtMember = $db->prepare("INSERT INTO property_agents (property_id, user_id, role) VALUES (?, ?, 'lead_agent')");
                 $stmtMember->execute([$projectId, $realtorId]);
             }
